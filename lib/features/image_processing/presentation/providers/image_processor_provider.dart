@@ -6,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
-
+import 'dart:math';
 import '../../domain/usecases/apply_histogram.dart';
 import '../../domain/usecases/apply_contrast.dart';
 import '../../domain/usecases/apply_smoothing.dart';
@@ -37,6 +37,8 @@ class ImageProcessorProvider extends ChangeNotifier {
   img.Image? _processedImage;
   List<String> _modifiedImages = [];
   List<String> _unmodifiedImages = [];
+  List<img.Image> _history = [];
+  int _historyIndex = -1;
 
   ImageProcessorProvider(
     this._applyHistogram,
@@ -57,10 +59,52 @@ class ImageProcessorProvider extends ChangeNotifier {
   List<String> get modifiedImages => _modifiedImages;
   List<String> get unmodifiedImages => _unmodifiedImages;
 
+  void _saveToHistory() {
+    if (_processedImage != null) {
+      _history = _history.sublist(0, _historyIndex + 1);
+      _history.add(img.copyResize(_processedImage!,
+          width: _processedImage!.width, height: _processedImage!.height));
+      _historyIndex++;
+    }
+  }
+
+  void undo() {
+    if (_historyIndex > 0) {
+      _historyIndex--;
+      _processedImage = _history[_historyIndex];
+      notifyListeners();
+    }
+  }
+
+  void redo() {
+    if (_historyIndex < _history.length - 1) {
+      _historyIndex++;
+      _processedImage = _history[_historyIndex];
+      notifyListeners();
+    }
+  }
+
+  /// Méthode pour réinitialiser l'image traitée à son état original
+  void resetToOriginal() {
+    if (_originalImage != null) {
+      _processedImage = img.copyResize(
+        _originalImage!,
+        width: _originalImage!.width,
+        height: _originalImage!.height,
+      );
+      notifyListeners();
+    }
+  }
+
   void setImage(img.Image image) {
     _originalImage = image;
     _processedImage =
         img.copyResize(image, width: image.width, height: image.height);
+    _history = [
+      img.copyResize(_processedImage!,
+          width: _processedImage!.width, height: _processedImage!.height)
+    ];
+    _historyIndex = 0;
     notifyListeners();
   }
 
@@ -70,24 +114,29 @@ class ImageProcessorProvider extends ChangeNotifier {
       final bytes = await file.readAsBytes();
       final image = img.decodeImage(bytes);
       if (image != null) {
-        _originalImage = image;
-        _processedImage =
-            img.copyResize(image, width: image.width, height: image.height);
-        notifyListeners();
+        setImage(image);
       }
     }
   }
 
   Future<void> pickImage(ImageSource source) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: source);
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: source);
 
-    if (pickedFile != null) {
-      final bytes = await pickedFile.readAsBytes();
-      final image = img.decodeImage(bytes);
-      if (image != null) {
-        setImage(image);
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        final image = img.decodeImage(bytes);
+        if (image != null) {
+          setImage(image);
+        } else {
+          print('Erreur: L\'image n\'a pas pu être décodée.');
+        }
+      } else {
+        print('Erreur: Aucune image sélectionnée.');
       }
+    } catch (e) {
+      print('Erreur lors de la sélection de l\'image : $e');
     }
   }
 
@@ -100,6 +149,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applyHistogram() {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applyHistogram.execute(_processedImage!);
       notifyListeners();
       return 'Histogramme appliqué';
@@ -109,6 +159,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applyContrast(double contrast) {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applyContrast.execute(_processedImage!, contrast);
       notifyListeners();
       return 'Contraste ajusté';
@@ -118,6 +169,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applySmoothing() {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applySmoothing.execute(_processedImage!);
       notifyListeners();
       return 'Lissage appliqué';
@@ -127,6 +179,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applyEdgeDetection() {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applyEdgeDetection.execute(_processedImage!);
       notifyListeners();
       return 'Détection de contours appliquée';
@@ -136,6 +189,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applyRotation(int angle) {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applyRotation.execute(_processedImage!, angle);
       notifyListeners();
       return 'Image tournée';
@@ -145,6 +199,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applyResize(int width, int height) {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applyResize.execute(_processedImage!, width, height);
       notifyListeners();
       return 'Image redimensionnée';
@@ -154,6 +209,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applyBrightness(int brightness) {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applyBrightness.execute(_processedImage!, brightness);
       notifyListeners();
       return 'Luminosité ajustée';
@@ -163,6 +219,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applySaturation(double saturation) {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applySaturation.execute(_processedImage!, saturation);
       notifyListeners();
       return 'Saturation ajustée';
@@ -172,6 +229,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applyHue(double hue) {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applyHue.execute(_processedImage!, hue);
       notifyListeners();
       return 'Teinte ajustée';
@@ -181,6 +239,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applySharpen() {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applySharpen.execute(_processedImage!);
       notifyListeners();
       return 'Filtre de renforcement appliqué';
@@ -190,6 +249,7 @@ class ImageProcessorProvider extends ChangeNotifier {
 
   String applyLaplacianEdgeDetection() {
     if (_processedImage != null) {
+      _saveToHistory();
       _processedImage = _applyLaplacianEdgeDetection.execute(_processedImage!);
       notifyListeners();
       return 'Détection de contours Laplacian appliquée';
@@ -198,9 +258,16 @@ class ImageProcessorProvider extends ChangeNotifier {
   }
 
   void resetImage() {
-    _processedImage = img.copyResize(_originalImage!,
-        width: _originalImage!.width, height: _originalImage!.height);
-    notifyListeners();
+    if (_originalImage != null) {
+      _processedImage = img.copyResize(_originalImage!,
+          width: _originalImage!.width, height: _originalImage!.height);
+      _history = [
+        img.copyResize(_processedImage!,
+            width: _processedImage!.width, height: _processedImage!.height)
+      ];
+      _historyIndex = 0;
+      notifyListeners();
+    }
   }
 
   Future<String> saveImage(bool isModified) async {
@@ -208,7 +275,10 @@ class ImageProcessorProvider extends ChangeNotifier {
       final directory = await getApplicationDocumentsDirectory();
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.png';
       final file = File('${directory.path}/$fileName');
-      file.writeAsBytesSync(img.encodePng(_processedImage!));
+
+      // Application de la compression Shannon pour optimiser la taille du fichier
+      final compressedImage = _compressImageUsingShannon(_processedImage!);
+      file.writeAsBytesSync(img.encodePng(compressedImage));
 
       final prefs = await SharedPreferences.getInstance();
       if (isModified) {
@@ -222,9 +292,9 @@ class ImageProcessorProvider extends ChangeNotifier {
       }
 
       notifyListeners();
-      return 'Image enregistrée';
+      return file.path;
     }
-    return 'Aucune image à enregistrer';
+    return '';
   }
 
   Future<void> loadSavedImages() async {
@@ -250,5 +320,39 @@ class ImageProcessorProvider extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  Future<void> shareImage(String path) async {
+    // Implementation for sharing image via WhatsApp or email
+    // Utilisez un package tel que `share_plus` pour partager le fichier.
+  }
+
+  img.Image _compressImageUsingShannon(img.Image image) {
+    // Calcul de l'entropie de Shannon
+    final histogram = List<int>.filled(256, 0);
+    for (int y = 0; y < image.height; y++) {
+      for (int x = 0; x < image.width; x++) {
+        final pixel = image.getPixel(x, y);
+        final gray = img.getRed(pixel); // assuming grayscale image
+        histogram[gray]++;
+      }
+    }
+
+    final totalPixels = image.width * image.height;
+    double entropy = 0.0;
+    for (int count in histogram) {
+      if (count > 0) {
+        final probability = count / totalPixels;
+        entropy -= probability * log(probability) / log(2);
+      }
+    }
+
+    // Application d'une compression basée sur l'entropie
+    final compressionRatio =
+        entropy / 8.0; // assuming maximum entropy is 8 bits
+    final compressedImage =
+        img.copyResize(image, width: (image.width * compressionRatio).toInt());
+
+    return compressedImage;
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'features/image_processing/presentation/pages/home_page.dart';
+import 'features/image_processing/presentation/pages/splash_screen.dart';
 import 'features/image_processing/presentation/providers/image_processor_provider.dart';
 import 'features/image_processing/domain/usecases/apply_histogram.dart';
 import 'features/image_processing/domain/usecases/apply_contrast.dart';
@@ -19,7 +21,7 @@ import 'injection.config.dart';
 
 void main() {
   configureDependencies();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 final getIt = GetIt.instance;
@@ -28,6 +30,8 @@ final getIt = GetIt.instance;
 void configureDependencies() => $initGetIt(getIt);
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -53,7 +57,11 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.teal,
         ),
-        initialRoute: '/',
+        initialRoute: '/', // Utilisez '/' pour le splash screen
+        routes: {
+          '/': (context) => SplashScreen(),
+          '/home': (context) => HomePage(),
+        },
         onGenerateRoute: AppRouter.generateRoute,
       ),
     );

@@ -10,8 +10,8 @@ class ResizeDialog extends StatefulWidget {
 }
 
 class _ResizeDialogState extends State<ResizeDialog> {
-  final _largeurController = TextEditingController();
-  final _hauteurController = TextEditingController();
+  int _width = 100;
+  int _height = 100;
 
   @override
   Widget build(BuildContext context) {
@@ -21,14 +21,22 @@ class _ResizeDialogState extends State<ResizeDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
-            controller: _largeurController,
-            decoration: InputDecoration(labelText: 'Largeur'),
             keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: 'Largeur'),
+            onChanged: (value) {
+              setState(() {
+                _width = int.tryParse(value) ?? 100;
+              });
+            },
           ),
           TextField(
-            controller: _hauteurController,
-            decoration: InputDecoration(labelText: 'Hauteur'),
             keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: 'Hauteur'),
+            onChanged: (value) {
+              setState(() {
+                _height = int.tryParse(value) ?? 100;
+              });
+            },
           ),
         ],
       ),
@@ -41,12 +49,8 @@ class _ResizeDialogState extends State<ResizeDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            final largeur = int.tryParse(_largeurController.text);
-            final hauteur = int.tryParse(_hauteurController.text);
-            if (largeur != null && hauteur != null) {
-              widget.onResize(largeur, hauteur);
-              Navigator.of(context).pop();
-            }
+            widget.onResize(_width, _height);
+            Navigator.of(context).pop();
           },
           child: Text('Redimensionner'),
         ),
