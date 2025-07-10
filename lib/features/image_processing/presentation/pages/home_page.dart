@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../../../image_processing/presentation/providers/image_processor_provider.dart';
 import '../../../image_processing/presentation/pages/image_editing_page.dart';
 import '../widgets/saved_images_grid.dart';
@@ -12,6 +17,41 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
+
+  Future<void> pickImage(BuildContext context) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+
+    if (result != null) {
+      if (kIsWeb) {
+        Uint8List? fileBytes = result.files.single.bytes;
+        String fileName = result.files.single.name;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ImageEditingPage(
+              imageBytes: fileBytes,
+              fileName: fileName,
+            ),
+          ),
+        );
+      } else {
+        String? filePath = result.files.single.path;
+        if (filePath != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ImageEditingPage(
+                imagePath: filePath,
+              ),
+            ),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,12 +100,7 @@ class _HomePageState extends State<HomePage> {
       ),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ImageEditingPage()),
-                );
-              },
+              onPressed: () => pickImage(context),
               backgroundColor: Colors.teal,
               child: const Icon(Icons.add_a_photo),
             )
@@ -142,6 +177,12 @@ class _HomePageState extends State<HomePage> {
               MaterialPageRoute(builder: (context) => ImageEditingPage()),
             );
           },
+        ),
+        _buildActionCard(
+          context,
+          icon: Icons.photo_library,
+          label: 'Depuis la galerie',
+          onTap: () => pickImage(context),
         ),
         _buildActionCard(
           context,

@@ -28,5 +28,18 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need microphone access</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Nous avons besoin d’accéder à la caméra pour prendre des photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Nous avons besoin d’accéder à vos photos pour sélectionner des images.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Nous avons besoin d’accéder à vos documents pour enregistrer/ouvrir des fichiers.</string>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+
 </dict>
 </plist>

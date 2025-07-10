@@ -7,6 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import '../../domain/usecases/apply_histogram.dart';
 import '../../domain/usecases/apply_contrast.dart';
 import '../../domain/usecases/apply_smoothing.dart';
@@ -58,6 +61,23 @@ class ImageProcessorProvider extends ChangeNotifier {
   img.Image? get processedImage => _processedImage;
   List<String> get modifiedImages => _modifiedImages;
   List<String> get unmodifiedImages => _unmodifiedImages;
+
+  // --- AJOUT : GESTION IMAGE DEPUIS BYTES OU CHEMIN ---
+  void setImageFromBytes(Uint8List bytes) {
+    final image = img.decodeImage(bytes);
+    if (image != null) {
+      setImage(image);
+    } else {
+      print("Erreur : l'image (bytes) n'a pas pu être décodée.");
+    }
+  }
+
+  void setImageFromPath(String path) {
+    final file = File(path);
+    final bytes = file.readAsBytesSync();
+    setImageFromBytes(bytes);
+  }
+  // --- FIN AJOUT ---
 
   void _saveToHistory() {
     if (_processedImage != null) {
@@ -141,10 +161,12 @@ class ImageProcessorProvider extends ChangeNotifier {
   }
 
   Future<void> requestPermissions() async {
-    await [
-      Permission.camera,
-      Permission.photos,
-    ].request();
+    if (!kIsWeb) {
+      await [
+        Permission.camera,
+        Permission.photos,
+      ].request();
+    }
   }
 
   String applyHistogram() {

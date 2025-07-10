@@ -1,14 +1,21 @@
 import 'dart:typed_data';
-
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:image/image.dart' as img;
 import 'package:share/share.dart';
 import '../providers/image_processor_provider.dart';
 import '../widgets/resize_dialog.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ImageEditingPage extends StatefulWidget {
+  final String? imagePath;
+  final Uint8List? imageBytes;
+  final String? fileName;
+
+  const ImageEditingPage({Key? key, this.imagePath, this.imageBytes, this.fileName})
+      : super(key: key);
+
   @override
   _ImageEditingPageState createState() => _ImageEditingPageState();
 }
@@ -19,6 +26,23 @@ class _ImageEditingPageState extends State<ImageEditingPage> {
   double _saturationValue = 1.0;
   double _hueValue = 0.0;
   bool _showOriginal = false;
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Charger l'image fournie (depuis galerie/fichier)
+    if (!_initialized) {
+      final imageProcessor =
+          Provider.of<ImageProcessorProvider>(context, listen: false);
+      if (widget.imageBytes != null) {
+        imageProcessor.setImageFromBytes(widget.imageBytes!);
+      } else if (widget.imagePath != null) {
+        imageProcessor.setImageFromPath(widget.imagePath!);
+      }
+      _initialized = true;
+    }
+  }
 
   void showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -231,39 +255,7 @@ class _ImageEditingPageState extends State<ImageEditingPage> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final imageProcessor =
-              Provider.of<ImageProcessorProvider>(context, listen: false);
-          await imageProcessor.requestPermissions();
-          showModalBottomSheet(
-            context: context,
-            builder: (context) => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: Icon(Icons.photo_library),
-                  title: Text('Choisir depuis la galerie'),
-                  onTap: () {
-                    imageProcessor.pickImage(ImageSource.gallery);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.camera_alt),
-                  title: Text('Prendre une photo'),
-                  onTap: () {
-                    imageProcessor.pickImage(ImageSource.camera);
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
-          );
-        },
-        child: Icon(Icons.add_a_photo),
-        backgroundColor: Colors.teal,
-      ),
+      // Le bouton flottant est retiré ici car la sélection d'image se fait dans HomePage
     );
   }
 
